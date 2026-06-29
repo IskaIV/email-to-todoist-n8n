@@ -1,0 +1,8 @@
+# Ignore environment files and system files
+.env
+DS_Store
+node_modules/
+dist/
+*.log
+*.tmp
+.claude
