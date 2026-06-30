@@ -348,7 +348,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        3840,
+        3888,
         1152
       ],
       "id": "00120542-fc5e-4df1-b2c6-e5e194865bf5",
@@ -536,7 +536,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        3424,
+        3440,
         1152
       ]
     },
@@ -551,7 +551,7 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        3632,
+        3664,
         1152
       ]
     },
@@ -567,7 +567,7 @@
       "typeVersion": 2.1,
       "position": [
         2096,
-        2160
+        2048
       ],
       "webhookId": "004928a7-710b-4e38-8198-6d0c340e4bf4"
     },
@@ -582,7 +582,7 @@
       "typeVersion": 1,
       "position": [
         2320,
-        2160
+        2048
       ]
     },
     {
@@ -637,7 +637,7 @@
       "typeVersion": 1.1,
       "position": [
         2544,
-        2160
+        2048
       ]
     }
   ],
@@ -949,7 +949,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "8ff6b92f-552b-46e1-bc21-c560ce264491",
+  "versionId": "1b266a3a-2b79-4f51-8526-3a1300494281",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
