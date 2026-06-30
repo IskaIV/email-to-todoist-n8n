@@ -348,7 +348,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        3216,
+        3840,
         1152
       ],
       "id": "00120542-fc5e-4df1-b2c6-e5e194865bf5",
@@ -499,6 +499,116 @@
       ],
       "id": "a7b1a851-06df-43c8-b7d2-ab69c982fd42",
       "name": "Edit Fields7"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "options": {}
+      },
+      "id": "df521772-0b77-4813-b535-ce119219e1c7",
+      "name": "Split Messages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3216,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "hke3CHOtgI005rsP"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "message_id",
+              "keyValue": "={{ $json.messageId }}"
+            }
+          ]
+        }
+      },
+      "id": "b561ea1f-f76f-4c4c-b543-ad6bb12a7172",
+      "name": "Filter New",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3424,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "hke3CHOtgI005rsP"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message_id": "={{ $json.messageId }}",
+            "subject": "={{ $json.subject }}",
+            "processed_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "processed_at",
+              "displayName": "processed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ad863c54-280c-437e-b298-a5cdf163ad5e",
+      "name": "Record Seen",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3632,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "messages",
+        "options": {}
+      },
+      "id": "45ae78dd-3bb4-4ae5-8994-5c8981c09eb2",
+      "name": "Aggregate New",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3632,
+        1152
+      ]
     }
   ],
   "pinData": {},
@@ -692,17 +802,6 @@
         ]
       ]
     },
-    "Normalize, Sort": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Get Account 1 Mail": {
       "main": [
         [
@@ -746,15 +845,64 @@
           }
         ]
       ]
+    },
+    "Normalize, Sort": {
+      "main": [
+        [
+          {
+            "node": "Split Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Messages": {
+      "main": [
+        [
+          {
+            "node": "Filter New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter New": {
+      "main": [
+        [
+          {
+            "node": "Aggregate New",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Record Seen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate New": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "05cf02d8-0633-464c-9b54-9119cafe74dc",
+  "versionId": "1c1cfeea-861b-40ae-a601-4b4cca1aa88a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
