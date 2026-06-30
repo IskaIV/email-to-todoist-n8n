@@ -1,0 +1,767 @@
+{
+  "name": "Email-to-Todoist",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "email-tasks",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        1152
+      ],
+      "id": "8d825d92-74c2-4fc1-84d4-d185f9f65697",
+      "name": "Webhook",
+      "webhookId": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        1824
+      ],
+      "id": "e17c0d7c-9dca-438e-8fe6-baa5488c3f45",
+      "name": "Get Account 8 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_8",
+          "name": "Account 8 - Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        1632
+      ],
+      "id": "c850fa92-5329-4b4d-84b9-55d1bf458f64",
+      "name": "Get Account 7 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_7",
+          "name": "Account 7 - Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        1248
+      ],
+      "id": "132b4554-9da0-453a-b06f-6aec53cd6a68",
+      "name": "Get Account 5 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_5",
+          "name": "Account 5 - Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        1440
+      ],
+      "id": "9785afac-b639-42bd-a74a-c7d845f3b4a8",
+      "name": "Get Account 6 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_6",
+          "name": "Account 6 - Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        1056
+      ],
+      "id": "bd4f5631-3a00-4a74-b078-7377d99d2324",
+      "name": "Get Account 4 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Account 4 - Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        864
+      ],
+      "id": "f26ba551-ff85-4eb7-ae03-fb7ad9282c38",
+      "name": "Get Account 3 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_3",
+          "name": "Account 3 - Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 5",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Gmail",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        1248
+      ],
+      "id": "1f68647b-978e-4f64-b4db-aa639badbf44",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 8",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Gmail",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        1824
+      ],
+      "id": "8ed4567f-f954-4016-9f1a-37b12d1ecf4a",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 6",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Gmail",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        1440
+      ],
+      "id": "82d189b0-c1a8-4def-ab6c-05a66f67a980",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 7",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Gmail",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        1632
+      ],
+      "id": "dd53cd8e-e21e-4bba-8703-dc990b452efb",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 4",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Gmail",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        1056
+      ],
+      "id": "be783aea-123e-49b9-8e1c-68955247ecf6",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 3",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Gmail",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        864
+      ],
+      "id": "bbfa9861-274b-4fa1-afb5-9a6b12418a9e",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3216,
+        1152
+      ],
+      "id": "00120542-fc5e-4df1-b2c6-e5e194865bf5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "numberInputs": 8
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2768,
+        1056
+      ],
+      "id": "1bc7cd0f-cf88-4b27-a478-806beb3247a1",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const isGmail = j.internalDate !== undefined || j.labels !== undefined || j.threadId !== undefined;\n  const id = (j.id !== undefined && j.id !== null) ? String(j.id) : '';\n  if (isGmail) {\n    out.push({\n      messageId: id ? `gmail:${id}` : '',\n      account: j.account || j.To || '',\n      source: 'Gmail',\n      from: j.From || '',\n      subject: j.Subject || '',\n      snippet: j.snippet || '',\n      date: j.internalDate ? new Date(Number(j.internalDate)).toISOString() : ''\n    });\n  } else {\n    out.push({\n      messageId: id ? `outlook:${id}` : '',\n      account: j.account || (Array.isArray(j.to) ? j.to[0]?.address : '') || '',\n      source: 'Outlook',\n      from: (typeof j.from === 'string' ? j.from : j.from?.emailAddress?.address) || '',\n      subject: j.subject || '',\n      snippet: j.bodyPreview || '',\n      date: j.receivedDateTime || j.sentDateTime || ''\n    });\n  }\n}\n\n// newest first, so the copy we keep is the freshest\nout.sort((a, b) => new Date(b.date) - new Date(a.date));\n\n// de-dupe within this run: collapse the same message arriving in multiple mailboxes\nconst seen = new Set();\nconst deduped = [];\nfor (const m of out) {\n  const norm = s => (s || '').toString().trim().toLowerCase();\n  const key = m.messageId || [\n    norm(m.from).replace(/.*<([^>]+)>.*/, '$1'),\n    norm(m.subject),\n    norm(m.snippet).slice(0, 80)\n  ].join('|');\n  if (seen.has(key)) continue;\n  seen.add(key);\n  deduped.push(m);\n}\n\nreturn [{ json: {\n  count: deduped.length,\n  duplicatesRemoved: out.length - deduped.length,\n  generatedAt: new Date().toISOString(),\n  messages: deduped\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2992,
+        1152
+      ],
+      "id": "306af8cf-d7dc-482f-911e-11dc85d286f6",
+      "name": "Normalize, Sort"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "output": "raw",
+        "filtersUI": {
+          "values": {
+            "filters": {
+              "receivedAfter": "={{ $now.minus(1,'day').toISO() }}"
+            }
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        480
+      ],
+      "id": "473fcc3a-fb1a-4fa9-b21c-96589ec50271",
+      "name": "Get Account 1 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000003",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Account 1 - Outlook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "output": "raw",
+        "filtersUI": {
+          "values": {
+            "filters": {
+              "receivedAfter": "={{ $now.minus(1,'day').toISO() }}"
+            }
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        672
+      ],
+      "id": "c33b0902-6b2f-44ff-b2a1-39bd3b3862c4",
+      "name": "Get Account 2 Mail",
+      "webhookId": "00000000-0000-0000-0000-000000000003",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "Account 2 - Outlook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 1",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Outlook",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        480
+      ],
+      "id": "cef4064d-b9a2-42e5-ba85-20030144e7a8",
+      "name": "Edit Fields6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2df5a904-6832-42d1-aa22-fefc34f5debc",
+              "name": "account",
+              "value": "Account 2",
+              "type": "string"
+            },
+            {
+              "id": "493389b2-8fef-4654-b913-a184875760b8",
+              "name": "source",
+              "value": "Outlook",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        672
+      ],
+      "id": "a7b1a851-06df-43c8-b7d2-ab69c982fd42",
+      "name": "Edit Fields7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Account 1 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 2 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 3 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 4 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 5 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 6 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 7 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Account 8 Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 5 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 8 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 6 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 7 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 4 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 3 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 7
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Normalize, Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize, Sort": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 1 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account 2 Mail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields7": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields6": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "05cf02d8-0633-464c-9b54-9119cafe74dc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "BKR8VDzbwhrl3x0Y",
+  "tags": []
+}
