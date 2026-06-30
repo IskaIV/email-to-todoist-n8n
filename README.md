@@ -29,6 +29,9 @@ OpenClaw (AI Agent)
   [Merge all 8 streams]
       v
   [Normalize, Deduplicate, Sort]
+      |
+      +<---> [Data Table: Seen Message IDs]
+      |       (cross-run duplicate tracking)
       v
   [Respond to Webhook]
       |
@@ -49,14 +52,49 @@ OpenClaw (AI Agent)
 | Get \* Mail (×8) | Gmail / Outlook | Fetches all emails received in the last 24 hours |
 | Edit Fields (×8) | Set | Tags each email with its `account` name and `source` (Gmail or Outlook) |
 | Merge | Merge | Combines all 8 parallel streams into one |
-| Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, deduplicates, sorts newest-first |
+| Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, deduplicates within the run, sorts newest-first |
+| Seen Message IDs | n8n Data Table | Persists processed message IDs across runs to prevent repeat task creation |
 | Respond to Webhook | Respond to Webhook | Returns the JSON payload back to OpenClaw |
+
+---
+
+## Deduplication
+
+Two layers of deduplication work together to ensure no email generates more than one Todoist task:
+
+### 1. In-run deduplication (Normalize, Sort node)
+
+Within a single webhook call, the same email can arrive from multiple inboxes (e.g., a reply-all that lands in two of your accounts). The code node collapses these using a `Set` keyed on:
+
+- `messageId` (`gmail:<id>` or `outlook:<id>`) when available
+- A composite of **sender address + subject + snippet prefix** as a fallback
+
+The newest copy is kept; all others are discarded. The response includes a `duplicatesRemoved` count.
+
+### 2. Cross-run deduplication (Data Table)
+
+Because the workflow fetches the last 24 hours of mail on every trigger, the same email will appear on multiple consecutive runs. The **Seen Message IDs** data table persists the `messageId` of every email that has already been returned to OpenClaw. On each run:
+
+1. Newly fetched message IDs are checked against the table.
+2. Any ID already present is filtered out before the response is sent.
+3. New IDs are written to the table after filtering.
+
+This ensures OpenClaw only receives — and therefore only creates Todoist tasks for — emails it has not seen before.
+
+#### Data Table Schema
+
+| Column | Type | Description |
+|---|---|---|
+| `message_id` | String | Prefixed ID (`gmail:…` or `outlook:…`) |
+| `account` | String | Account label the message was fetched from |
+| `source` | String | `Gmail` or `Outlook` |
+| `seen_at` | String | ISO 8601 timestamp of when the ID was recorded |
 
 ---
 
 ## Output Schema
 
-The webhook returns a single JSON object:
+The webhook returns a single JSON object containing only emails not previously seen:
 
 ```json
 {
@@ -77,7 +115,7 @@ The webhook returns a single JSON object:
 }
 ```
 
-`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions. Deduplication collapses the same message when it arrives in multiple inboxes, keeping the newest copy.
+`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions.
 
 ---
 
@@ -113,12 +151,17 @@ Configure the following credentials in n8n before activating the workflow:
 **Gmail (Google OAuth2):**
 - One credential per Gmail account (6 total)
 
+### Data Table
+
+Create a data table in n8n named **Seen Message IDs** with the columns defined in the schema above. The workflow reads from and writes to this table on every run.
+
 ### Import the Workflow
 
 1. In n8n, go to **Workflows → Import**
 2. Upload `Email-to-Todoist.json`
 3. Assign your credentials to each Gmail and Outlook node
-4. Activate the workflow
+4. Create the **Seen Message IDs** data table
+5. Activate the workflow
 
 ### Configure OpenClaw
 
@@ -136,4 +179,4 @@ OpenClaw receives the normalized email list, applies AI reasoning to determine t
 
 - The workflow fetches emails from the **last 24 hours** on every trigger. Adjust the `minus(1, 'day')` expressions in the Gmail/Outlook nodes to change the lookback window.
 - The workflow is exposed as an MCP tool (`availableInMCP: true`), which is how OpenClaw discovers and invokes it.
-- Deduplication is keyed on `messageId` when available, or falls back to a composite of sender address + subject + snippet prefix.
+- The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove IDs older than your lookback window.
