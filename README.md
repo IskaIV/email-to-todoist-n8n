@@ -6,6 +6,10 @@ An n8n workflow that serves as the data-fetching backbone for an OpenClaw AI age
 
 ## How It Works
 
+The workflow runs as two separate webhook calls per cycle.
+
+### Step 1 — Fetch
+
 ```
 OpenClaw (AI Agent)
       |
@@ -30,8 +34,7 @@ OpenClaw (AI Agent)
       v
   [Normalize, Deduplicate, Sort]
       |
-      +<---> [Data Table: Seen Message IDs]
-      |       (cross-run duplicate tracking)
+      +--> [Data Table: Seen Message IDs]  (READ — filter already-acked IDs)
       v
   [Respond to Webhook]
       |
@@ -42,19 +45,46 @@ OpenClaw (AI Agent)
   — creates Todoist tasks
 ```
 
+### Step 2 — Acknowledge
+
+```
+OpenClaw (AI Agent)
+      |
+      | HTTP POST /webhook/email-ack  (called last, after all tasks are created)
+      | body: { "messageIds": ["gmail:abc...", "outlook:xyz..."] }
+      v
+  [n8n Ack Webhook]
+      |
+      v
+  [Data Table: Seen Message IDs]  (WRITE — record IDs as processed)
+      |
+      v
+  [Respond to Webhook]
+```
+
 ---
 
 ## Nodes
 
+**Fetch workflow (`/webhook/email-tasks`)**
+
 | Node | Type | Purpose |
 |---|---|---|
-| Webhook | Webhook | Entry point; triggered by OpenClaw at `/webhook/email-tasks` |
-| Get \* Mail (×8) | Gmail / Outlook | Fetches all emails received in the last 24 hours |
+| Webhook | Webhook | Entry point; triggered by OpenClaw |
+| Get \* Mail (×8) | Gmail / Outlook | Fetches all emails received in the last 2 days |
 | Edit Fields (×8) | Set | Tags each email with its `account` name and `source` (Gmail or Outlook) |
 | Merge | Merge | Combines all 8 parallel streams into one |
 | Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, deduplicates within the run, sorts newest-first |
-| Seen Message IDs | n8n Data Table | Persists processed message IDs across runs to prevent repeat task creation |
-| Respond to Webhook | Respond to Webhook | Returns the JSON payload back to OpenClaw |
+| Seen Message IDs | n8n Data Table | Read: filters out already-acked message IDs before responding |
+| Respond to Webhook | Respond to Webhook | Returns the filtered email list to OpenClaw |
+
+**Ack workflow (`/webhook/email-ack`)**
+
+| Node | Type | Purpose |
+|---|---|---|
+| Ack Webhook | Webhook | Receives the list of message IDs OpenClaw successfully tasked |
+| Seen Message IDs | n8n Data Table | Write: records each acked ID so it is suppressed on future fetch runs |
+| Respond to Webhook | Respond to Webhook | Confirms receipt to OpenClaw |
 
 ---
 
@@ -71,15 +101,15 @@ Within a single webhook call, the same email can arrive from multiple inboxes (e
 
 The newest copy is kept; all others are discarded. The response includes a `duplicatesRemoved` count.
 
-### 2. Cross-run deduplication (Data Table)
+### 2. Cross-run deduplication (Data Table + Ack)
 
-Because the workflow fetches the last 24 hours of mail on every trigger, the same email will appear on multiple consecutive runs. The **Seen Message IDs** data table persists the `messageId` of every email that has already been returned to OpenClaw. On each run:
+The fetch window is 2 days, so the same email appears on multiple consecutive runs. The **Seen Message IDs** data table prevents repeat task creation across runs, but IDs are only written to it **after OpenClaw confirms tasks were created** — via a POST to the ack endpoint. This makes the system crash-safe:
 
-1. Newly fetched message IDs are checked against the table.
-2. Any ID already present is filtered out before the response is sent.
-3. New IDs are written to the table after filtering.
+- **Fetch run**: reads the table and filters out already-acked IDs before responding. Nothing is written.
+- **OpenClaw**: receives the filtered list, creates Todoist tasks, then POSTs the message IDs to `/webhook/email-ack`.
+- **Ack run**: writes those IDs to the table, marking them as processed.
 
-This ensures OpenClaw only receives — and therefore only creates Todoist tasks for — emails it has not seen before.
+If a run fails between fetch and ack (OpenClaw crashes, Todoist is unavailable, etc.), no IDs are written. The emails remain unacked, reappear in the next 2-day fetch window, and get processed again cleanly. Nothing is lost and nothing is double-counted.
 
 #### Data Table Schema
 
@@ -165,18 +195,27 @@ Create a data table in n8n named **Seen Message IDs** with the columns defined i
 
 ### Configure OpenClaw
 
-Point OpenClaw's email-fetch tool at:
+Configure two tools in OpenClaw:
 
+**Fetch** — call first to get new emails:
 ```
 POST https://<your-n8n-host>/webhook/email-tasks
 ```
 
-OpenClaw receives the normalized email list, applies AI reasoning to determine task content, project placement, priority, and due dates, then creates the tasks directly in Todoist.
+**Ack** — call last, after all Todoist tasks are created:
+```
+POST https://<your-n8n-host>/webhook/email-ack
+Content-Type: application/json
+
+{ "messageIds": ["gmail:abc123...", "outlook:xyz456..."] }
+```
+
+OpenClaw must always ack before ending its run. If it acks before tasks are fully created, emails may be silently dropped on failures.
 
 ---
 
 ## Notes
 
-- The workflow fetches emails from the **last 24 hours** on every trigger. Adjust the `minus(1, 'day')` expressions in the Gmail/Outlook nodes to change the lookback window.
+- The workflow fetches emails from the **last 2 days** on every trigger. Adjust the `minus(2, 'day')` expressions in the Gmail/Outlook nodes to change the lookback window. The window should always be longer than the maximum expected gap between runs so unacked emails are never missed.
 - The workflow is exposed as an MCP tool (`availableInMCP: true`), which is how OpenClaw discovers and invokes it.
-- The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove IDs older than your lookback window.
+- The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove IDs with a `seen_at` older than your lookback window.
