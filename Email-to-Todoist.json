@@ -22,7 +22,7 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+          "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
@@ -46,7 +46,7 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+          "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
@@ -70,7 +70,7 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+          "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
@@ -94,7 +94,7 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+          "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
@@ -118,7 +118,7 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+          "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
@@ -142,7 +142,7 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "receivedAfter": "={{ $now.minus(1, 'day').toISO() }}"
+          "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
@@ -388,7 +388,7 @@
         "filtersUI": {
           "values": {
             "filters": {
-              "receivedAfter": "={{ $now.minus(1,'day').toISO() }}"
+              "receivedAfter": "={{ $now.minus(2,'day').toISO() }}"
             }
           }
         },
@@ -418,7 +418,7 @@
         "filtersUI": {
           "values": {
             "filters": {
-              "receivedAfter": "={{ $now.minus(1,'day').toISO() }}"
+              "receivedAfter": "={{ $now.minus(2,'day').toISO() }}"
             }
           }
         },
@@ -542,6 +542,51 @@
     },
     {
       "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "messages",
+        "options": {}
+      },
+      "id": "45ae78dd-3bb4-4ae5-8994-5c8981c09eb2",
+      "name": "Aggregate New",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3632,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-tasks-ack",
+        "options": {}
+      },
+      "id": "6053ae41-1b74-42fb-b933-dab0746765a8",
+      "name": "Ack Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        2160
+      ],
+      "webhookId": "004928a7-710b-4e38-8198-6d0c340e4bf4"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "body.processed",
+        "options": {}
+      },
+      "id": "d2fd2915-cf11-46b7-912d-71e83fc3688b",
+      "name": "Split Ack",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        2160
+      ]
+    },
+    {
+      "parameters": {
         "dataTableId": {
           "__rl": true,
           "mode": "id",
@@ -586,28 +631,13 @@
         },
         "options": {}
       },
-      "id": "ad863c54-280c-437e-b298-a5cdf163ad5e",
-      "name": "Record Seen",
+      "id": "4890d1f1-6719-4c20-9704-b6755866b2c5",
+      "name": "Record Acked",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        3632,
-        1328
-      ]
-    },
-    {
-      "parameters": {
-        "aggregate": "aggregateAllItemData",
-        "destinationFieldName": "messages",
-        "options": {}
-      },
-      "id": "45ae78dd-3bb4-4ae5-8994-5c8981c09eb2",
-      "name": "Aggregate New",
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
-      "position": [
-        3632,
-        1152
+        2544,
+        2160
       ]
     }
   ],
@@ -875,11 +905,6 @@
             "node": "Aggregate New",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Record Seen",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -894,6 +919,28 @@
           }
         ]
       ]
+    },
+    "Ack Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Ack": {
+      "main": [
+        [
+          {
+            "node": "Record Acked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -902,7 +949,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "1c1cfeea-861b-40ae-a601-4b4cca1aa88a",
+  "versionId": "8ff6b92f-552b-46e1-bc21-c560ce264491",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
