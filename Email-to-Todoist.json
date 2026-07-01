@@ -639,6 +639,46 @@
         2544,
         2048
       ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-tasks-notify",
+        "options": {}
+      },
+      "id": "14d1d09b-6f28-4517-919f-d49223caf1c8",
+      "name": "Notify Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        2272
+      ],
+      "webhookId": "f1b7a0c4-092f-42b0-a5de-411c2403276f"
+    },
+    {
+      "parameters": {
+        "chatId": "CHAT_ID",
+        "text": "={{ $json.body.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "313c0085-b826-4004-87ef-24b5027d963d",
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2320,
+        2272
+      ],
+      "webhookId": "9a711b93-2152-4f1f-9caf-4cd8a75082e9",
+      "credentials": {
+        "telegramApi": {
+          "id": "I3KhJbH8LqncTJHe",
+          "name": "BOT_NAME"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -941,15 +981,29 @@
           }
         ]
       ]
+    },
+    "Notify Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": true
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 230
   },
-  "versionId": "1b266a3a-2b79-4f51-8526-3a1300494281",
+  "versionId": "1787260a-e51f-49dd-8e74-f3278bea2c5a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
