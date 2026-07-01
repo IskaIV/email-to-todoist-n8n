@@ -348,7 +348,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        3888,
+        4112,
         1152
       ],
       "id": "00120542-fc5e-4df1-b2c6-e5e194865bf5",
@@ -369,7 +369,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const isGmail = j.internalDate !== undefined || j.labels !== undefined || j.threadId !== undefined;\n  const id = (j.id !== undefined && j.id !== null) ? String(j.id) : '';\n  if (isGmail) {\n    out.push({\n      messageId: id ? `gmail:${id}` : '',\n      account: j.account || j.To || '',\n      source: 'Gmail',\n      from: j.From || '',\n      subject: j.Subject || '',\n      snippet: j.snippet || '',\n      date: j.internalDate ? new Date(Number(j.internalDate)).toISOString() : ''\n    });\n  } else {\n    out.push({\n      messageId: id ? `outlook:${id}` : '',\n      account: j.account || (Array.isArray(j.to) ? j.to[0]?.address : '') || '',\n      source: 'Outlook',\n      from: (typeof j.from === 'string' ? j.from : j.from?.emailAddress?.address) || '',\n      subject: j.subject || '',\n      snippet: j.bodyPreview || '',\n      date: j.receivedDateTime || j.sentDateTime || ''\n    });\n  }\n}\n\n// newest first, so the copy we keep is the freshest\nout.sort((a, b) => new Date(b.date) - new Date(a.date));\n\n// de-dupe within this run: collapse the same message arriving in multiple mailboxes\nconst seen = new Set();\nconst deduped = [];\nfor (const m of out) {\n  const norm = s => (s || '').toString().trim().toLowerCase();\n  const key = m.messageId || [\n    norm(m.from).replace(/.*<([^>]+)>.*/, '$1'),\n    norm(m.subject),\n    norm(m.snippet).slice(0, 80)\n  ].join('|');\n  if (seen.has(key)) continue;\n  seen.add(key);\n  deduped.push(m);\n}\n\nreturn [{ json: {\n  count: deduped.length,\n  duplicatesRemoved: out.length - deduped.length,\n  generatedAt: new Date().toISOString(),\n  messages: deduped\n} }];"
+        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const isGmail = j.internalDate !== undefined || j.labels !== undefined || j.threadId !== undefined;\n  const id = (j.id !== undefined && j.id !== null) ? String(j.id) : '';\n  if (isGmail) {\n    out.push({\n      messageId: id ? `gmail:${id}` : '',\n      account: j.account || j.To || '',\n      source: 'Gmail',\n      from: j.From || '',\n      subject: j.Subject || '',\n      snippet: j.snippet || '',\n      date: j.internalDate ? new Date(Number(j.internalDate)).toISOString() : ''\n    });\n  } else {\n    out.push({\n      messageId: id ? `outlook:${id}` : '',\n      account: j.account || (Array.isArray(j.to) ? j.to[0]?.address : '') || '',\n      source: 'Outlook',\n      from: (typeof j.from === 'string' ? j.from : j.from?.emailAddress?.address) || '',\n      subject: j.subject || '',\n      snippet: j.bodyPreview || '',\n      date: j.receivedDateTime || j.sentDateTime || ''\n    });\n  }\n}\n\n// content key: sender email + normalized subject. Ignores which mailbox/provider\n// received it, so the same message landing in multiple accounts collapses to one.\nconst emailOf = s => {\n  const m = (s || '').toString().toLowerCase().match(/<([^>]+)>/);\n  return (m ? m[1] : (s || '')).toString().trim().toLowerCase();\n};\nconst normSubj = s => (s || '').toString().trim().toLowerCase()\n  .replace(/^(re|fwd|fw)\\s*:\\s*/i, '')\n  .replace(/^(re|fwd|fw)\\s*:\\s*/i, '')\n  .replace(/\\s+/g, ' ');\nfor (const m of out) {\n  m.contentKey = emailOf(m.from) + '|' + normSubj(m.subject);\n}\n\n// newest first, so the copy we keep is the freshest\nout.sort((a, b) => new Date(b.date) - new Date(a.date));\n\n// de-dupe within this run by content (collapses same message across mailboxes)\nconst seen = new Set();\nconst deduped = [];\nfor (const m of out) {\n  const key = m.contentKey || m.messageId;\n  if (seen.has(key)) continue;\n  seen.add(key);\n  deduped.push(m);\n}\n\nreturn [{ json: {\n  count: deduped.length,\n  duplicatesRemoved: out.length - deduped.length,\n  generatedAt: new Date().toISOString(),\n  messages: deduped\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -551,7 +551,7 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        3664,
+        3888,
         1152
       ]
     },
@@ -597,6 +597,7 @@
           "value": {
             "message_id": "={{ $json.messageId }}",
             "subject": "={{ $json.subject }}",
+            "content_key": "={{ $json.contentKey }}",
             "processed_at": "={{ $now.toISO() }}"
           },
           "schema": [
@@ -617,6 +618,15 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": false
+            },
+            {
+              "id": "content_key",
+              "displayName": "content_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
             },
             {
               "id": "processed_at",
@@ -675,10 +685,36 @@
       "webhookId": "9a711b93-2152-4f1f-9caf-4cd8a75082e9",
       "credentials": {
         "telegramApi": {
-          "id": "I3KhJbH8LqncTJHe",
+          "id": "i5NHCWjfEoHz7Dce",
           "name": "BOT_NAME"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "hke3CHOtgI005rsP"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content_key",
+              "keyValue": "={{ $json.contentKey }}"
+            }
+          ]
+        }
+      },
+      "id": "c5ec1812-0b30-4d41-b947-1b2db1f535d9",
+      "name": "Filter Dup Content",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3664,
+        1152
+      ]
     }
   ],
   "pinData": {},
@@ -938,17 +974,6 @@
         ]
       ]
     },
-    "Filter New": {
-      "main": [
-        [
-          {
-            "node": "Aggregate New",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Aggregate New": {
       "main": [
         [
@@ -992,6 +1017,28 @@
           }
         ]
       ]
+    },
+    "Filter New": {
+      "main": [
+        [
+          {
+            "node": "Filter Dup Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Dup Content": {
+      "main": [
+        [
+          {
+            "node": "Aggregate New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1003,7 +1050,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "timeSavedPerExecution": 230
   },
-  "versionId": "1787260a-e51f-49dd-8e74-f3278bea2c5a",
+  "versionId": "6d770c0a-b463-4059-99f3-202ed2307d82",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
