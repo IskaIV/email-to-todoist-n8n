@@ -62,6 +62,22 @@ OpenClaw (AI Agent)
   [Respond to Webhook]
 ```
 
+### Step 3 — Notify (optional)
+
+A standalone webhook for pushing ad-hoc alerts (e.g., errors, run summaries) to Telegram. It is not wired into the fetch/ack flow — any caller can trigger it independently.
+
+```
+Caller
+      |
+      | HTTP POST /webhook/email-tasks-notify
+      | body: { "text": "message to send" }
+      v
+  [Notify Webhook]
+      |
+      v
+  [Send Telegram]
+```
+
 ---
 
 ## Nodes
@@ -85,6 +101,13 @@ OpenClaw (AI Agent)
 | Ack Webhook | Webhook | Receives the list of message IDs OpenClaw successfully tasked |
 | Seen Message IDs | n8n Data Table | Write: records each acked ID so it is suppressed on future fetch runs |
 | Respond to Webhook | Respond to Webhook | Confirms receipt to OpenClaw |
+
+**Notify workflow (`/webhook/email-tasks-notify`)**
+
+| Node | Type | Purpose |
+|---|---|---|
+| Notify Webhook | Webhook | Entry point for ad-hoc notifications; accepts `{ "text": "..." }` |
+| Send Telegram | Telegram | Forwards the `text` field to a configured Telegram chat |
 
 ---
 
@@ -181,6 +204,10 @@ Configure the following credentials in n8n before activating the workflow:
 **Gmail (Google OAuth2):**
 - One credential per Gmail account (6 total)
 
+**Telegram (Bot API):**
+- One credential for the notify workflow's Send Telegram node
+- Set the target `chatId` on that node to your own chat/group ID
+
 ### Data Table
 
 Create a data table in n8n named **Seen Message IDs** with the columns defined in the schema above. The workflow reads from and writes to this table on every run.
@@ -219,3 +246,4 @@ OpenClaw must always ack before ending its run. If it acks before tasks are full
 - The workflow fetches emails from the **last 2 days** on every trigger. Adjust the `minus(2, 'day')` expressions in the Gmail/Outlook nodes to change the lookback window. The window should always be longer than the maximum expected gap between runs so unacked emails are never missed.
 - The workflow is exposed as an MCP tool (`availableInMCP: true`), which is how OpenClaw discovers and invokes it.
 - The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove IDs with a `seen_at` older than your lookback window.
+- The notify webhook (`/webhook/email-tasks-notify`) is independent of the fetch/ack pair and has no `Respond to Webhook` node — it's fire-and-forget. Use it for out-of-band alerts (e.g., failures) rather than as part of the core task pipeline.
