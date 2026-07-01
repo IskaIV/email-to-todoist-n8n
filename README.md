@@ -33,8 +33,12 @@ OpenClaw (AI Agent)
   [Merge all 8 streams]
       v
   [Normalize, Deduplicate, Sort]
-      |
-      +--> [Data Table: Seen Message IDs]  (READ — filter already-acked IDs)
+      v
+  [Filter New]  (READ Seen Message IDs — drop already-acked message IDs)
+      v
+  [Filter Dup Content]  (READ Seen Message IDs — drop already-acked content keys)
+      v
+  [Aggregate New]
       v
   [Respond to Webhook]
       |
@@ -90,8 +94,10 @@ Caller
 | Get \* Mail (×8) | Gmail / Outlook | Fetches all emails received in the last 2 days |
 | Edit Fields (×8) | Set | Tags each email with its `account` name and `source` (Gmail or Outlook) |
 | Merge | Merge | Combines all 8 parallel streams into one |
-| Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, deduplicates within the run, sorts newest-first |
-| Seen Message IDs | n8n Data Table | Read: filters out already-acked message IDs before responding |
+| Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, computes a content key, deduplicates within the run, sorts newest-first |
+| Filter New | n8n Data Table | Read: filters out messages whose `message_id` was already acked |
+| Filter Dup Content | n8n Data Table | Read: filters out messages whose `content_key` was already acked (catches re-sends/forwards with a new message ID but identical content) |
+| Aggregate New | Aggregate | Collects the surviving messages into a single `messages` array |
 | Respond to Webhook | Respond to Webhook | Returns the filtered email list to OpenClaw |
 
 **Ack workflow (`/webhook/email-ack`)**
@@ -99,7 +105,7 @@ Caller
 | Node | Type | Purpose |
 |---|---|---|
 | Ack Webhook | Webhook | Receives the list of message IDs OpenClaw successfully tasked |
-| Seen Message IDs | n8n Data Table | Write: records each acked ID so it is suppressed on future fetch runs |
+| Seen Message IDs | n8n Data Table | Write: records each acked message's `message_id` and `content_key` so it is suppressed on future fetch runs |
 | Respond to Webhook | Respond to Webhook | Confirms receipt to OpenClaw |
 
 **Notify workflow (`/webhook/email-tasks-notify`)**
@@ -113,35 +119,37 @@ Caller
 
 ## Deduplication
 
+Every message carries two identifiers, both computed in the Normalize, Sort node:
+
+- **`messageId`** — the provider-native ID (`gmail:<id>` or `outlook:<id>`)
+- **`contentKey`** — `<sender email> | <normalized subject>`, with `Re:`/`Fwd:`/`Fw:` prefixes and case/whitespace differences stripped
+
+`contentKey` is what makes cross-mailbox and cross-run dedup possible even when the same message shows up under a different `messageId` — e.g., a forward, a re-send, or the same email delivered separately to two mailboxes.
+
 Two layers of deduplication work together to ensure no email generates more than one Todoist task:
 
 ### 1. In-run deduplication (Normalize, Sort node)
 
-Within a single webhook call, the same email can arrive from multiple inboxes (e.g., a reply-all that lands in two of your accounts). The code node collapses these using a `Set` keyed on:
-
-- `messageId` (`gmail:<id>` or `outlook:<id>`) when available
-- A composite of **sender address + subject + snippet prefix** as a fallback
-
-The newest copy is kept; all others are discarded. The response includes a `duplicatesRemoved` count.
+Within a single webhook call, the same email can arrive from multiple inboxes (e.g., a reply-all that lands in two of your accounts). The code node sorts newest-first, then collapses items using a `Set` keyed on `contentKey` (falling back to `messageId` if no content key could be computed). The newest copy is kept; all others are discarded. The response includes a `duplicatesRemoved` count.
 
 ### 2. Cross-run deduplication (Data Table + Ack)
 
-The fetch window is 2 days, so the same email appears on multiple consecutive runs. The **Seen Message IDs** data table prevents repeat task creation across runs, but IDs are only written to it **after OpenClaw confirms tasks were created** — via a POST to the ack endpoint. This makes the system crash-safe:
+The fetch window is 2 days, so the same email appears on multiple consecutive runs. The **Seen Message IDs** data table prevents repeat task creation across runs, but rows are only written to it **after OpenClaw confirms tasks were created** — via a POST to the ack endpoint. This makes the system crash-safe:
 
-- **Fetch run**: reads the table and filters out already-acked IDs before responding. Nothing is written.
+- **Fetch run**: two data-table lookups filter the candidate list before responding — first by `message_id` (**Filter New**), then by `content_key` (**Filter Dup Content**), so a message is dropped if either identifier was already acked. Nothing is written at this stage.
 - **OpenClaw**: receives the filtered list, creates Todoist tasks, then POSTs the message IDs to `/webhook/email-ack`.
-- **Ack run**: writes those IDs to the table, marking them as processed.
+- **Ack run**: writes each message's `message_id` and `content_key` to the table, marking it as processed.
 
-If a run fails between fetch and ack (OpenClaw crashes, Todoist is unavailable, etc.), no IDs are written. The emails remain unacked, reappear in the next 2-day fetch window, and get processed again cleanly. Nothing is lost and nothing is double-counted.
+If a run fails between fetch and ack (OpenClaw crashes, Todoist is unavailable, etc.), no rows are written. The emails remain unacked, reappear in the next 2-day fetch window, and get processed again cleanly. Nothing is lost and nothing is double-counted.
 
 #### Data Table Schema
 
 | Column | Type | Description |
 |---|---|---|
 | `message_id` | String | Prefixed ID (`gmail:…` or `outlook:…`) |
-| `account` | String | Account label the message was fetched from |
-| `source` | String | `Gmail` or `Outlook` |
-| `seen_at` | String | ISO 8601 timestamp of when the ID was recorded |
+| `subject` | String | Subject line of the acked message |
+| `content_key` | String | Normalized `sender | subject` key, used to catch content duplicates across differing message IDs |
+| `processed_at` | String | ISO 8601 timestamp of when the row was recorded |
 
 ---
 
@@ -159,6 +167,7 @@ The webhook returns a single JSON object containing only emails not previously s
       "messageId": "gmail:abc123...",
       "account": "Account 3",
       "source": "Gmail",
+      "contentKey": "sender@example.com|example subject",
       "from": "sender@example.com",
       "subject": "Example Subject",
       "snippet": "Preview of the email body...",
@@ -168,7 +177,7 @@ The webhook returns a single JSON object containing only emails not previously s
 }
 ```
 
-`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions.
+`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions. `contentKey` is the normalized `sender|subject` pair used for content-based deduplication (see [Deduplication](#deduplication)).
 
 ---
 
@@ -245,5 +254,6 @@ OpenClaw must always ack before ending its run. If it acks before tasks are full
 
 - The workflow fetches emails from the **last 2 days** on every trigger. Adjust the `minus(2, 'day')` expressions in the Gmail/Outlook nodes to change the lookback window. The window should always be longer than the maximum expected gap between runs so unacked emails are never missed.
 - The workflow is exposed as an MCP tool (`availableInMCP: true`), which is how OpenClaw discovers and invokes it.
-- The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove IDs with a `seen_at` older than your lookback window.
+- The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove rows with a `processed_at` older than your lookback window.
 - The notify webhook (`/webhook/email-tasks-notify`) is independent of the fetch/ack pair and has no `Respond to Webhook` node — it's fire-and-forget. Use it for out-of-band alerts (e.g., failures) rather than as part of the core task pipeline.
+- Content-based filtering means two emails with the same sender and subject are treated as the same message, even across different mailboxes or with different provider IDs. If you legitimately expect repeat emails with identical subjects from the same sender (e.g., recurring automated reports), only the first will produce a task per acked cycle.
