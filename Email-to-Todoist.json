@@ -683,6 +683,8 @@
         2272
       ],
       "webhookId": "9a711b93-2152-4f1f-9caf-4cd8a75082e9",
+      "retryOnFail": true,
+      "maxTries": 5,
       "credentials": {
         "telegramApi": {
           "id": "i5NHCWjfEoHz7Dce",
@@ -715,6 +717,290 @@
         3664,
         1152
       ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-tasks-commit",
+        "options": {}
+      },
+      "id": "8ac51589-38b7-45d5-a1ca-7a364048df0e",
+      "name": "Commit Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        2640
+      ],
+      "webhookId": "18874c1f-05d5-4868-8e2b-5b7ceeb2e759"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst tasks = Array.isArray(body.tasks) ? body.tasks : [];\n\nconst PROJECTS = {\n  'inbox': '6gc2qFxj6vPvH52F',\n  'project 1': '6gchGJVQMH4f8rJc',\n  'project 2': '6gchGJRm92r52mPM',\n  'project 3': '6gchGJVJRfRww5H7',\n  'personal': '6gf7GpRPFr369wQG',\n  'project 4': '6gf7RXX4wrjQ7QhV',\n  'project 5': '6gchGJWrHRGPGvQr',\n  'project 6': '6gchGJc3MhCRHxG6',\n  'project 7': '6gchGJf56F4wpgwv',\n  'project 8': '6gchGJggMVjXCMCP',\n  'project 9': '6gchGJhP5wFj8Qf7',\n  'project 10': '6gchGJmh7x2jMXqF',\n  'project 11': '6gchGJmcWJJXRGq3',\n  'project 12': '6gchGJpVXvhC6PQj',\n  'project 13': '6gchGJrFMcw3p62X',\n  'project 14': '6gchGJqG53crVcq9',\n  'project 15': '6gchGJxpQfFggGf4',\n  'project 16': '6gchGJxGwpvjJg4j',\n  'project 17': '6gchGJwXW59gCrvH',\n  'project 18': '6gchGM3GvVwfv5vg',\n  'project 19': '6gchGM2jrMF64gcv',\n  'new project ideas': '6gchMG43F63QWxqp',\n  'project 20': '6ggpg3pWrVxX4gqX',\n};\n\nconst norm = s => (s || '').toString()\n  .replace(/[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{FE0F}]/gu, '')\n  .replace(/[´’‘']/g, '')\n  .toLowerCase().replace(/\\s+/g, ' ').trim();\n\nconst resolveProject = (name) => {\n  const n = norm(name);\n  if (n && PROJECTS[n]) return { id: PROJECTS[n], name: name };\n  if (n) {\n    for (const [k, id] of Object.entries(PROJECTS)) {\n      if (k.includes(n) || n.includes(k)) return { id, name: name };\n    }\n  }\n  return { id: PROJECTS['inbox'], name: 'Inbox' };\n};\n\nconst PRIO = { p1: 4, p2: 3, p3: 2, p4: 1 };\n\nconst out = [];\nfor (const t of tasks) {\n  const proj = resolveProject(t.project);\n  out.push({ json: {\n    title: (t.title || 'Untitled task').toString().slice(0, 500),\n    description: (t.description || '').toString().slice(0, 16000),\n    prio: PRIO[(t.priority || 'p4').toString().toLowerCase()] || 1,\n    dueString: t.dueString ? t.dueString.toString() : '',\n    projectName: proj.name,\n    projectId: proj.id,\n    messageId: t.messageId || '',\n    subject: t.subject || '',\n    contentKey: t.contentKey || '',\n  }});\n}\nreturn out;"
+      },
+      "id": "6afd0e34-b6c1-481f-a98b-5d483ad8c83b",
+      "name": "Prepare Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst skipped = Array.isArray(body.skipped) ? body.skipped : [];\nreturn skipped.map(s => ({ json: {\n  messageId: s.messageId || '',\n  subject: s.subject || '',\n  contentKey: s.contentKey || '',\n}}));"
+      },
+      "id": "bb9e703d-e44e-44ec-ad63-5a384661a455",
+      "name": "Skipped Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        2880
+      ]
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.projectId }}"
+        },
+        "content": "={{ $json.title }}",
+        "options": {
+          "description": "={{ $json.description }}",
+          "dueString": "={{ $json.dueString }}",
+          "priority": "={{ $json.prio }}"
+        }
+      },
+      "id": "f2b2df4f-887b-425a-8009-f0b5c747af4a",
+      "name": "Create Todoist Task",
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 2.2,
+      "position": [
+        2544,
+        2640
+      ],
+      "credentials": {
+        "todoistApi": {
+          "id": "pbRIpn7f0fbYfX4Z",
+          "name": "Todoist API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "messageId",
+              "value": "={{ $('Prepare Tasks').item.json.messageId }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "subject",
+              "value": "={{ $('Prepare Tasks').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "contentKey",
+              "value": "={{ $('Prepare Tasks').item.json.contentKey }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "projectName",
+              "value": "={{ $('Prepare Tasks').item.json.projectName }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "title",
+              "value": "={{ $('Prepare Tasks').item.json.title }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "228fb104-53a2-469a-bf01-3c65dc256952",
+      "name": "Task Ack Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2768,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "title",
+              "value": "={{ $('Prepare Tasks').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "projectName",
+              "value": "={{ $('Prepare Tasks').item.json.projectName }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "messageId",
+              "value": "={{ $('Prepare Tasks').item.json.messageId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "error",
+              "value": "={{ ($json.error && ($json.error.message || $json.error.description || JSON.stringify($json.error).slice(0,200))) || 'create failed' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "874c1551-471c-41e0-aec3-b8c695f3d4c4",
+      "name": "Failed Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2768,
+        2784
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "cf747936-a838-4813-9c63-7d7e979b07de",
+      "name": "Merge Acks",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2992,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "hke3CHOtgI005rsP"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message_id": "={{ $json.messageId }}",
+            "subject": "={{ $json.subject }}",
+            "content_key": "={{ $json.contentKey }}",
+            "processed_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "content_key",
+              "displayName": "content_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "processed_at",
+              "displayName": "processed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "98d46f05-9658-48e6-8ea5-75bce2d2c8e4",
+      "name": "Record Committed",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3216,
+        2720
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "f9f82200-f708-49d1-8fa2-ca17bf04abb5",
+      "name": "Sync",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3440,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Commit Webhook').first().json.body || {};\nlet created = [];\nlet failed = [];\ntry { created = $('Task Ack Fields').all().map(i => i.json); } catch (e) {}\ntry { failed = $('Failed Fields').all().map(i => i.json); } catch (e) {}\nconst skipped = Array.isArray(body.skipped) ? body.skipped.length : 0;\nconst received = (typeof body.received === 'number') ? body.received : created.length + failed.length + skipped;\n\nconst dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });\n\nconst lines = [];\nlines.push(`\\u{1F4E5} Email → Todoist · ${dateStr}`);\nlines.push(`Received ${received} · Created ${created.length} · Skipped ${skipped}${failed.length ? ` · Failed ${failed.length}` : ''}`);\n\nif (created.length) {\n  lines.push('');\n  lines.push('\\u{1F195} New tasks');\n  const byProj = {};\n  for (const c of created) {\n    const p = c.projectName || 'Inbox';\n    (byProj[p] = byProj[p] || []).push(c.title);\n  }\n  for (const [proj, titles] of Object.entries(byProj)) {\n    lines.push('');\n    lines.push(proj);\n    for (const t of titles) lines.push(`• ${t}`);\n  }\n} else {\n  lines.push('');\n  lines.push('No action items today — everything was noise.');\n}\n\nif (failed.length) {\n  lines.push('');\n  lines.push('⚠️ Failed (left unacked, will retry next run)');\n  for (const f of failed) lines.push(`• ${f.title}`);\n}\n\nreturn [{ json: { text: lines.join('\\n') } }];"
+      },
+      "id": "dc39f810-ebad-4b38-8095-cc7659b155ec",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3664,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "96af96ac-7b4b-4539-935d-e6b117b12823",
+      "name": "Send Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3888,
+        2640
+      ],
+      "webhookId": "ff4bd49f-1d3a-4372-b69c-bffed2d7dc8d",
+      "credentials": {
+        "telegramApi": {
+          "id": "i5NHCWjfEoHz7Dce",
+          "name": "Todoist_bot"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1039,6 +1325,122 @@
           }
         ]
       ]
+    },
+    "Commit Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Skipped Rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sync",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Prepare Tasks": {
+      "main": [
+        [
+          {
+            "node": "Create Todoist Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Todoist Task": {
+      "main": [
+        [
+          {
+            "node": "Task Ack Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task Ack Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge Acks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skipped Rows": {
+      "main": [
+        [
+          {
+            "node": "Merge Acks",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Acks": {
+      "main": [
+        [
+          {
+            "node": "Record Committed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Committed": {
+      "main": [
+        [
+          {
+            "node": "Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync": {
+      "main": [
+        [
+          {
+            "node": "Build Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1050,7 +1452,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "timeSavedPerExecution": 230
   },
-  "versionId": "6d770c0a-b463-4059-99f3-202ed2307d82",
+  "versionId": "86cbb46d-2c06-43eb-85b5-4203833ae7dd",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
