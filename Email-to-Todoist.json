@@ -998,7 +998,7 @@
       "credentials": {
         "telegramApi": {
           "id": "i5NHCWjfEoHz7Dce",
-          "name": "Todoist_bot"
+          "name": "BOT_NAME"
         }
       }
     }

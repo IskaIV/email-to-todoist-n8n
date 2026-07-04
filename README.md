@@ -1,12 +1,12 @@
 # Email to Todoist — n8n Workflow
 
-An n8n workflow that serves as the data-fetching backbone for an OpenClaw AI agent. OpenClaw calls this workflow via webhook (MCP), receives a normalized feed of emails from multiple accounts across Gmail and Outlook, then uses its own AI reasoning to organize that mail into Todoist tasks.
+An n8n workflow that serves as the data-fetching and task-creation backbone for an OpenClaw AI agent. OpenClaw calls this workflow via webhook (MCP): it fetches a normalized feed of emails from multiple accounts across Gmail and Outlook, decides which ones need a Todoist task, then hands its decisions back to n8n — which resolves projects, creates the tasks natively, acknowledges what it processed, and posts a run summary to Telegram.
 
 ---
 
 ## How It Works
 
-The workflow runs as two separate webhook calls per cycle.
+The workflow runs as two webhook calls per cycle, plus an optional standalone notifier.
 
 ### Step 1 — Fetch
 
@@ -45,30 +45,67 @@ OpenClaw (AI Agent)
       v
 OpenClaw (AI Agent)
   — reads email list
-  — decides priority, project, due dates
-  — creates Todoist tasks
+  — decides which emails need a task, plus title/description/priority/due date/project for each
+  — decides which emails to skip (no task needed)
+  — POSTs all of it in one call to Step 2 (Commit)
 ```
 
-### Step 2 — Acknowledge
+### Step 2 — Commit
+
+OpenClaw no longer talks to Todoist directly — it just describes what it wants, and n8n creates the tasks natively. This is a single webhook call that resolves projects, creates tasks, acknowledges everything it successfully handled, and sends a Telegram summary.
 
 ```
 OpenClaw (AI Agent)
       |
-      | HTTP POST /webhook/email-ack  (called last, after all tasks are created)
-      | body: { "messageIds": ["gmail:abc...", "outlook:xyz..."] }
+      | HTTP POST /webhook/email-tasks-commit
+      | body: { "tasks": [...], "skipped": [...], "received": N }
       v
-  [n8n Ack Webhook]
+  [Commit Webhook]
       |
-      v
-  [Data Table: Seen Message IDs]  (WRITE — record IDs as processed)
-      |
-      v
-  [Respond to Webhook]
+      +----------------------------+
+      |                            |
+      v                            v
+  [Prepare Tasks]              [Skipped Rows]
+  (resolve project name          (pull messageId/subject/
+   -> Todoist project ID,         contentKey for emails
+   fallback Inbox; map            OpenClaw decided didn't
+   p1-p4 -> priority 4-1)         need a task)
+      |                            |
+      v                            |
+  [Create Todoist Task]            |
+  (native Todoist node,            |
+   continues past errors)          |
+      |                            |
+   success     failure             |
+      |           |                |
+      v           v                |
+  [Task Ack   [Failed              |
+   Fields]     Fields]             |
+      |           |                |
+      +-----+-----+                |
+            v                      |
+      [Merge Acks] <---------------+
+            |
+            v
+  [Record Committed]  (WRITE Seen Message IDs — created + skipped only; failures are left out)
+            |
+            v
+         [Sync]
+            |
+            v
+     [Build Summary]  (groups new tasks by project, lists any failures)
+            |
+            v
+     [Send Summary]  (Telegram)
 ```
+
+Tasks that fail to create (e.g. Todoist briefly unavailable) are **not** acked, so they reappear in the next Fetch call's message list and get retried automatically — nothing is silently dropped.
+
+> **Note:** an older, simpler acknowledgment path (`/webhook/email-ack`, `Ack Webhook` → `Split Ack` → `Record Acked`, taking just `{ "messageIds": [...] }`) still exists in the workflow for backward compatibility, but OpenClaw no longer calls it — task creation, acking, and summary notification are now all handled by the Commit step above.
 
 ### Step 3 — Notify (optional)
 
-A standalone webhook for pushing ad-hoc alerts (e.g., errors, run summaries) to Telegram. It is not wired into the fetch/ack flow — any caller can trigger it independently.
+A standalone webhook for pushing ad-hoc alerts (e.g., errors) to Telegram, using the same bot as the Commit step's run summaries. It is not wired into the fetch/commit flow — any caller can trigger it independently.
 
 ```
 Caller
@@ -100,13 +137,31 @@ Caller
 | Aggregate New | Aggregate | Collects the surviving messages into a single `messages` array |
 | Respond to Webhook | Respond to Webhook | Returns the filtered email list to OpenClaw |
 
-**Ack workflow (`/webhook/email-ack`)**
+**Commit workflow (`/webhook/email-tasks-commit`)**
 
 | Node | Type | Purpose |
 |---|---|---|
-| Ack Webhook | Webhook | Receives the list of message IDs OpenClaw successfully tasked |
-| Seen Message IDs | n8n Data Table | Write: records each acked message's `message_id` and `content_key` so it is suppressed on future fetch runs |
-| Respond to Webhook | Respond to Webhook | Confirms receipt to OpenClaw |
+| Commit Webhook | Webhook | Entry point; receives OpenClaw's task decisions (`tasks`) and skipped emails (`skipped`) |
+| Prepare Tasks | Code (JS) | Resolves each task's `project` name to a Todoist project ID (fuzzy, case/emoji-insensitive match; falls back to Inbox), maps `p1`-`p4` to Todoist's 4–1 priority scale |
+| Skipped Rows | Code (JS) | Extracts `messageId`/`subject`/`contentKey` from the `skipped` array so those emails also get acked without creating a task |
+| Create Todoist Task | Todoist | Creates each task natively in its resolved project; continues past errors instead of failing the run |
+| Task Ack Fields | Set | Captures identifying fields for successfully created tasks |
+| Failed Fields | Set | Captures the same fields plus the error message for tasks that failed to create |
+| Merge Acks | Merge | Combines successful creates with skipped rows (failed creates are excluded) |
+| Record Committed | n8n Data Table | Write: records `message_id`/`content_key` for everything successfully handled, so it's suppressed on future fetch runs |
+| Sync | Merge | Waits for the data-table write to finish before building the summary |
+| Build Summary | Code (JS) | Groups newly created tasks by project and lists any failures into a formatted message |
+| Send Summary | Telegram | Sends the grouped summary to Telegram |
+
+**Legacy Ack workflow (`/webhook/email-ack`) — no longer called by OpenClaw**
+
+| Node | Type | Purpose |
+|---|---|---|
+| Ack Webhook | Webhook | Receives a plain list of message IDs (`{ "messageIds": [...] }`) |
+| Split Ack | Split Out | Splits the array into individual items |
+| Record Acked | n8n Data Table | Write: records each acked message's `message_id` and `content_key` so it is suppressed on future fetch runs |
+
+Kept for backward compatibility; the Commit workflow above now owns acking as part of task creation.
 
 **Notify workflow (`/webhook/email-tasks-notify`)**
 
@@ -132,15 +187,15 @@ Two layers of deduplication work together to ensure no email generates more than
 
 Within a single webhook call, the same email can arrive from multiple inboxes (e.g., a reply-all that lands in two of your accounts). The code node sorts newest-first, then collapses items using a `Set` keyed on `contentKey` (falling back to `messageId` if no content key could be computed). The newest copy is kept; all others are discarded. The response includes a `duplicatesRemoved` count.
 
-### 2. Cross-run deduplication (Data Table + Ack)
+### 2. Cross-run deduplication (Data Table + Commit)
 
-The fetch window is 2 days, so the same email appears on multiple consecutive runs. The **Seen Message IDs** data table prevents repeat task creation across runs, but rows are only written to it **after OpenClaw confirms tasks were created** — via a POST to the ack endpoint. This makes the system crash-safe:
+The fetch window is 2 days, so the same email appears on multiple consecutive runs. The **Seen Message IDs** data table prevents repeat task creation across runs, but rows are only written to it **after n8n has actually created (or skipped) each item** — inside the Commit workflow. This makes the system crash-safe:
 
 - **Fetch run**: two data-table lookups filter the candidate list before responding — first by `message_id` (**Filter New**), then by `content_key` (**Filter Dup Content**), so a message is dropped if either identifier was already acked. Nothing is written at this stage.
-- **OpenClaw**: receives the filtered list, creates Todoist tasks, then POSTs the message IDs to `/webhook/email-ack`.
-- **Ack run**: writes each message's `message_id` and `content_key` to the table, marking it as processed.
+- **OpenClaw**: receives the filtered list, decides which emails need tasks (with project/priority/due date) and which to skip, then POSTs everything to `/webhook/email-tasks-commit`.
+- **Commit run**: creates each task natively via the Todoist node, then writes `message_id`/`content_key` to the table only for tasks that were **successfully created** plus emails that were explicitly **skipped**. Tasks whose creation failed are left unacked on purpose.
 
-If a run fails between fetch and ack (OpenClaw crashes, Todoist is unavailable, etc.), no rows are written. The emails remain unacked, reappear in the next 2-day fetch window, and get processed again cleanly. Nothing is lost and nothing is double-counted.
+If a run fails partway (Todoist is unavailable, a single task creation errors, etc.), only the items that actually succeeded get acked. The rest remain unacked, reappear in the next 2-day fetch window, and get retried automatically. Nothing is lost and nothing is double-counted.
 
 #### Data Table Schema
 
@@ -213,9 +268,12 @@ Configure the following credentials in n8n before activating the workflow:
 **Gmail (Google OAuth2):**
 - One credential per Gmail account (6 total)
 
+**Todoist API:**
+- One credential for the Commit workflow's Create Todoist Task node
+
 **Telegram (Bot API):**
-- One credential for the notify workflow's Send Telegram node
-- Set the target `chatId` on that node to your own chat/group ID
+- One credential, used by both the Commit workflow's Send Summary node and the standalone Notify workflow's Send Telegram node
+- Set the target `chatId` on each of those nodes to your own chat/group ID
 
 ### Data Table
 
@@ -225,9 +283,10 @@ Create a data table in n8n named **Seen Message IDs** with the columns defined i
 
 1. In n8n, go to **Workflows → Import**
 2. Upload `Email-to-Todoist.json`
-3. Assign your credentials to each Gmail and Outlook node
+3. Assign your credentials to each Gmail, Outlook, Todoist, and Telegram node
 4. Create the **Seen Message IDs** data table
-5. Activate the workflow
+5. In the **Prepare Tasks** code node, replace the placeholder `PROJECTS` map with your own Todoist project names → project IDs (keep an `inbox` entry as the fallback)
+6. Activate the workflow
 
 ### Configure OpenClaw
 
@@ -238,15 +297,32 @@ Configure two tools in OpenClaw:
 POST https://<your-n8n-host>/webhook/email-tasks
 ```
 
-**Ack** — call last, after all Todoist tasks are created:
+**Commit** — call last, once you've decided what to do with each email:
 ```
-POST https://<your-n8n-host>/webhook/email-ack
+POST https://<your-n8n-host>/webhook/email-tasks-commit
 Content-Type: application/json
 
-{ "messageIds": ["gmail:abc123...", "outlook:xyz456..."] }
+{
+  "received": 5,
+  "tasks": [
+    {
+      "title": "Follow up on invoice",
+      "description": "...",
+      "priority": "p2",
+      "dueString": "tomorrow",
+      "project": "Project 1",
+      "messageId": "gmail:abc123...",
+      "subject": "Invoice #123",
+      "contentKey": "sender@example.com|invoice 123"
+    }
+  ],
+  "skipped": [
+    { "messageId": "outlook:xyz456...", "subject": "Newsletter", "contentKey": "..." }
+  ]
+}
 ```
 
-OpenClaw must always ack before ending its run. If it acks before tasks are fully created, emails may be silently dropped on failures.
+OpenClaw must always commit before ending its run — task creation, acking, and the Telegram summary all happen as a side effect of this one call. If it never commits, the fetched emails stay unacked and simply reappear next run.
 
 ---
 
@@ -255,5 +331,6 @@ OpenClaw must always ack before ending its run. If it acks before tasks are full
 - The workflow fetches emails from the **last 2 days** on every trigger. Adjust the `minus(2, 'day')` expressions in the Gmail/Outlook nodes to change the lookback window. The window should always be longer than the maximum expected gap between runs so unacked emails are never missed.
 - The workflow is exposed as an MCP tool (`availableInMCP: true`), which is how OpenClaw discovers and invokes it.
 - The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove rows with a `processed_at` older than your lookback window.
-- The notify webhook (`/webhook/email-tasks-notify`) is independent of the fetch/ack pair and has no `Respond to Webhook` node — it's fire-and-forget. Use it for out-of-band alerts (e.g., failures) rather than as part of the core task pipeline.
+- Project name matching in **Prepare Tasks** is case-insensitive, strips emoji/smart-quotes, and falls back to a substring match before defaulting to Inbox — so OpenClaw doesn't need to send an exact project name.
+- The notify webhook (`/webhook/email-tasks-notify`) is independent of the fetch/commit pair and has no `Respond to Webhook` node — it's fire-and-forget. Use it for out-of-band alerts rather than as part of the core task pipeline.
 - Content-based filtering means two emails with the same sender and subject are treated as the same message, even across different mailboxes or with different provider IDs. If you legitimately expect repeat emails with identical subjects from the same sender (e.g., recurring automated reports), only the first will produce a task per acked cycle.
