@@ -10,8 +10,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        2096,
-        1152
+        1616,
+        1200
       ],
       "id": "8d825d92-74c2-4fc1-84d4-d185f9f65697",
       "name": "Webhook",
@@ -28,8 +28,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2320,
-        1824
+        1840,
+        1920
       ],
       "id": "e17c0d7c-9dca-438e-8fe6-baa5488c3f45",
       "name": "Get Account 8 Mail",
@@ -52,8 +52,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2320,
-        1632
+        1840,
+        1728
       ],
       "id": "c850fa92-5329-4b4d-84b9-55d1bf458f64",
       "name": "Get Account 7 Mail",
@@ -76,7 +76,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2320,
+        1840,
         1248
       ],
       "id": "132b4554-9da0-453a-b06f-6aec53cd6a68",
@@ -100,7 +100,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2320,
+        1840,
         1440
       ],
       "id": "9785afac-b639-42bd-a74a-c7d845f3b4a8",
@@ -124,7 +124,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2320,
+        1840,
         1056
       ],
       "id": "bd4f5631-3a00-4a74-b078-7377d99d2324",
@@ -148,7 +148,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2320,
+        1840,
         864
       ],
       "id": "f26ba551-ff85-4eb7-ae03-fb7ad9282c38",
@@ -185,7 +185,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
+        2064,
         1248
       ],
       "id": "1f68647b-978e-4f64-b4db-aa639badbf44",
@@ -215,8 +215,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
-        1824
+        2064,
+        1920
       ],
       "id": "8ed4567f-f954-4016-9f1a-37b12d1ecf4a",
       "name": "Edit Fields1"
@@ -245,7 +245,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
+        2064,
         1440
       ],
       "id": "82d189b0-c1a8-4def-ab6c-05a66f67a980",
@@ -275,8 +275,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
-        1632
+        2064,
+        1728
       ],
       "id": "dd53cd8e-e21e-4bba-8703-dc990b452efb",
       "name": "Edit Fields3"
@@ -305,7 +305,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
+        2064,
         1056
       ],
       "id": "be783aea-123e-49b9-8e1c-68955247ecf6",
@@ -335,7 +335,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
+        2064,
         864
       ],
       "id": "bbfa9861-274b-4fa1-afb5-9a6b12418a9e",
@@ -348,8 +348,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        4112,
-        1152
+        4080,
+        1328
       ],
       "id": "00120542-fc5e-4df1-b2c6-e5e194865bf5",
       "name": "Respond to Webhook"
@@ -361,7 +361,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2768,
+        2288,
         1056
       ],
       "id": "1bc7cd0f-cf88-4b27-a478-806beb3247a1",
@@ -374,7 +374,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2992,
+        2512,
         1152
       ],
       "id": "306af8cf-d7dc-482f-911e-11dc85d286f6",
@@ -397,7 +397,7 @@
       "type": "n8n-nodes-base.microsoftOutlook",
       "typeVersion": 2,
       "position": [
-        2320,
+        1840,
         480
       ],
       "id": "473fcc3a-fb1a-4fa9-b21c-96589ec50271",
@@ -427,7 +427,7 @@
       "type": "n8n-nodes-base.microsoftOutlook",
       "typeVersion": 2,
       "position": [
-        2320,
+        1840,
         672
       ],
       "id": "c33b0902-6b2f-44ff-b2a1-39bd3b3862c4",
@@ -464,7 +464,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
+        2064,
         480
       ],
       "id": "cef4064d-b9a2-42e5-ba85-20030144e7a8",
@@ -494,7 +494,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2544,
+        2064,
         672
       ],
       "id": "a7b1a851-06df-43c8-b7d2-ab69c982fd42",
@@ -510,7 +510,7 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        3216,
+        2736,
         1152
       ]
     },
@@ -520,7 +520,7 @@
         "dataTableId": {
           "__rl": true,
           "mode": "id",
-          "value": "hke3CHOtgI005rsP"
+          "value": "YOUR_DATA_TABLE_ID"
         },
         "filters": {
           "conditions": [
@@ -536,7 +536,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        3440,
+        2960,
         1152
       ]
     },
@@ -551,7 +551,7 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        3888,
+        3408,
         1152
       ]
     },
@@ -566,8 +566,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        2096,
-        2048
+        1616,
+        2144
       ],
       "webhookId": "004928a7-710b-4e38-8198-6d0c340e4bf4"
     },
@@ -581,8 +581,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        2320,
-        2048
+        1840,
+        2144
       ]
     },
     {
@@ -590,7 +590,7 @@
         "dataTableId": {
           "__rl": true,
           "mode": "id",
-          "value": "hke3CHOtgI005rsP"
+          "value": "YOUR_DATA_TABLE_ID"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -646,8 +646,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        2544,
-        2048
+        2064,
+        2144
       ]
     },
     {
@@ -661,8 +661,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        2096,
-        2272
+        1616,
+        2368
       ],
       "webhookId": "f1b7a0c4-092f-42b0-a5de-411c2403276f"
     },
@@ -679,8 +679,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2320,
-        2272
+        1840,
+        2368
       ],
       "webhookId": "9a711b93-2152-4f1f-9caf-4cd8a75082e9",
       "retryOnFail": true,
@@ -698,7 +698,7 @@
         "dataTableId": {
           "__rl": true,
           "mode": "id",
-          "value": "hke3CHOtgI005rsP"
+          "value": "YOUR_DATA_TABLE_ID"
         },
         "filters": {
           "conditions": [
@@ -714,7 +714,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        3664,
+        3184,
         1152
       ]
     },
@@ -729,8 +729,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        2096,
-        2640
+        1616,
+        2928
       ],
       "webhookId": "18874c1f-05d5-4868-8e2b-5b7ceeb2e759"
     },
@@ -743,8 +743,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2320,
-        2640
+        1840,
+        2688
       ]
     },
     {
@@ -756,8 +756,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2320,
-        2880
+        2288,
+        3072
       ]
     },
     {
@@ -779,9 +779,10 @@
       "type": "n8n-nodes-base.todoist",
       "typeVersion": 2.2,
       "position": [
-        2544,
-        2640
+        2064,
+        2688
       ],
+      "retryOnFail": true,
       "credentials": {
         "todoistApi": {
           "id": "pbRIpn7f0fbYfX4Z",
@@ -833,8 +834,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2768,
-        2560
+        2288,
+        2592
       ]
     },
     {
@@ -874,7 +875,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2768,
+        2288,
         2784
       ]
     },
@@ -885,8 +886,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2992,
-        2720
+        2512,
+        2592
       ]
     },
     {
@@ -894,7 +895,7 @@
         "dataTableId": {
           "__rl": true,
           "mode": "id",
-          "value": "hke3CHOtgI005rsP"
+          "value": "YOUR_DATA_TABLE_ID"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -950,8 +951,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        3216,
-        2720
+        2736,
+        2592
       ]
     },
     {
@@ -961,8 +962,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        3440,
-        2640
+        2960,
+        2768
       ]
     },
     {
@@ -974,8 +975,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3664,
-        2640
+        3184,
+        2768
       ]
     },
     {
@@ -991,8 +992,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3888,
-        2640
+        3408,
+        2768
       ],
       "webhookId": "ff4bd49f-1d3a-4372-b69c-bffed2d7dc8d",
       "credentials": {
@@ -1001,6 +1002,73 @@
           "name": "BOT_NAME"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {}
+      },
+      "id": "b66b2bd4-209e-4110-905c-67f0a9c985ad",
+      "name": "Get Open Tasks",
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 2.2,
+      "position": [
+        3184,
+        1584
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "todoistApi": {
+          "id": "pbRIpn7f0fbYfX4Z",
+          "name": "Todoist API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const NAMES = {\n  '6gc2qFxj6vPvH52F': 'Inbox',\n  '6gchGJVQMH4f8rJc': 'Project 1',\n  '6gchGJRm92r52mPM': 'Project 2',\n  '6gchGJVJRfRww5H7': 'Project 3',\n  '6gf7GpRPFr369wQG': 'Personal',\n  '6gf7RXX4wrjQ7QhV': 'Project 4',\n  '6gchGJWrHRGPGvQr': 'Project 5',\n  '6gchGJc3MhCRHxG6': 'Project 6',\n  '6gchGJf56F4wpgwv': 'Project 7',\n  '6gchGJggMVjXCMCP': 'Project 8',\n  '6gchGJhP5wFj8Qf7': 'Project 9',\n  '6gchGJmh7x2jMXqF': 'Project 10',\n  '6gchGJmcWJJXRGq3': 'Project 11',\n  '6gchGJpVXvhC6PQj': 'Project 12',\n  '6gchGJrFMcw3p62X': 'Project 13',\n  '6gchGJqG53crVcq9': 'Project 14',\n  '6gchGJxpQfFggGf4': 'Project 15',\n  '6gchGJxGwpvjJg4j': 'Project 16',\n  '6gchGJwXW59gCrvH': 'Project 17',\n  '6gchGM3GvVwfv5vg': 'Project 18',\n  '6gchGM2jrMF64gcv': 'Project 19',\n  '6gchMG43F63QWxqp': 'New project ideas',\n  '6ggpg3pWrVxX4gqX': 'Project 20',\n};\n\nconst openTasks = [];\ntry {\n  for (const item of $input.all()) {\n    const j = item.json || {};\n    const desc = (j.description || '').toString();\n    // only tasks this pipeline created (description carries the source-email line)\n    if (!desc.includes('From:') || !desc.includes('| Account:')) continue;\n    if (j.is_completed || j.checked) continue;\n    openTasks.push({\n      title: (j.content || '').toString().slice(0, 120),\n      project: NAMES[j.project_id] || 'Unknown',\n      createdAt: (j.created_at || j.added_at || '').toString().slice(0, 10),\n    });\n    if (openTasks.length >= 300) break;\n  }\n} catch (e) {}\n\nreturn [{ json: { openTasks } }];"
+      },
+      "id": "279bc86a-a2f6-4ce6-ad65-9d7c74097c51",
+      "name": "Pipeline Tasks Only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3408,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "id": "1f51fdc5-9469-4b7d-9201-a5b257c9a1a3",
+      "name": "Combine Response",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3632,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json || {};\nconst messages = Array.isArray(j.messages) ? j.messages : [];\nconst openTasks = Array.isArray(j.openTasks) ? j.openTasks : [];\nreturn [{ json: {\n  count: messages.length,\n  generatedAt: new Date().toISOString(),\n  messages,\n  openTasks,\n} }];"
+      },
+      "id": "aa976bd1-4515-4678-af7e-57b3459020b0",
+      "name": "Shape Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3856,
+        1328
+      ]
     }
   ],
   "pinData": {},
@@ -1045,6 +1113,11 @@
           },
           {
             "node": "Get Account 8 Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Open Tasks",
             "type": "main",
             "index": 0
           }
@@ -1260,17 +1333,6 @@
         ]
       ]
     },
-    "Aggregate New": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Ack Webhook": {
       "main": [
         [
@@ -1441,6 +1503,61 @@
           }
         ]
       ]
+    },
+    "Get Open Tasks": {
+      "main": [
+        [
+          {
+            "node": "Pipeline Tasks Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate New": {
+      "main": [
+        [
+          {
+            "node": "Combine Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pipeline Tasks Only": {
+      "main": [
+        [
+          {
+            "node": "Combine Response",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combine Response": {
+      "main": [
+        [
+          {
+            "node": "Shape Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1452,7 +1569,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "timeSavedPerExecution": 230
   },
-  "versionId": "86cbb46d-2c06-43eb-85b5-4203833ae7dd",
+  "versionId": "2d18d309-a873-4351-9f4e-6261efd4a9ee",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
