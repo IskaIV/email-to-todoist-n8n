@@ -128,10 +128,10 @@ Caller
 | Node | Type | Purpose |
 |---|---|---|
 | Webhook | Webhook | Entry point; triggered by OpenClaw |
-| Get \* Mail (×8) | Gmail / Outlook | Fetches all emails received in the last 2 days |
+| Get \* Mail (×8) | Gmail / Outlook | Fetches full emails received in the last 2 days (Gmail pulls full messages, not just previews; Outlook bodies were already available) |
 | Edit Fields (×8) | Set | Tags each email with its `account` name and `source` (Gmail or Outlook) |
 | Merge | Merge | Combines all 8 parallel streams into one |
-| Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, computes a content key, deduplicates within the run, sorts newest-first |
+| Normalize, Sort | Code (JS) | Normalizes Gmail vs Outlook schemas, computes a content key, extracts `bodyText` and `links` (see [Email Body & Links](#email-body--links)), deduplicates within the run, sorts newest-first |
 | Filter New | n8n Data Table | Read: filters out messages whose `message_id` was already acked |
 | Filter Dup Content | n8n Data Table | Read: filters out messages whose `content_key` was already acked (catches re-sends/forwards with a new message ID but identical content) |
 | Aggregate New | Aggregate | Collects the surviving messages into a single `messages` array |
@@ -237,6 +237,10 @@ The webhook returns a single, always-well-formed JSON object — including on a 
       "from": "sender@example.com",
       "subject": "Example Subject",
       "snippet": "Preview of the email body...",
+      "bodyText": "Full clean body text, HTML stripped, capped at roughly 1500 characters...",
+      "links": [
+        { "label": "Upload documents", "url": "https://example.com/case/12345678" }
+      ],
       "date": "2026-01-01T13:45:00.000Z"
     }
   ],
@@ -250,7 +254,20 @@ The webhook returns a single, always-well-formed JSON object — including on a 
 }
 ```
 
-`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions. `contentKey` is the normalized `sender|subject` pair used for content-based deduplication. `openTasks` lists every currently-open Todoist task this pipeline has created, and is what OpenClaw uses for semantic duplicate detection (see [Deduplication](#deduplication)).
+`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions. `contentKey` is the normalized `sender|subject` pair used for content-based deduplication. `bodyText` and `links` are the full-body extraction described below. `openTasks` lists every currently-open Todoist task this pipeline has created, and is what OpenClaw uses for semantic duplicate detection (see [Deduplication](#deduplication)).
+
+---
+
+## Email Body & Links
+
+Alongside the provider `snippet`, each message carries two fields computed in the Normalize, Sort node:
+
+- **`bodyText`** — the full message body as clean, readable text: HTML tags stripped, invisible zero-width padding removed, capped at roughly 1500 characters.
+- **`links`** — up to 5 meaningful links per email as `{ label, url }` pairs. Unsubscribe links, tracking pixels, and other link noise are filtered out before the cap is applied, so the links that survive are the ones actually worth acting on (e.g. "Upload documents", "View invoice").
+
+These give OpenClaw enough real content to write task descriptions with concrete, specific details (case numbers, deadlines, required steps) instead of paraphrasing a truncated snippet — and to surface the actual action link, if there is one, as part of the task.
+
+`bodyText` and `links` are extracted from untrusted email content, so they're handled the same way as the rest of the message: OpenClaw may quote a URL from `links` into a task description, but does not visit any link or follow any instruction found inside an email body.
 
 ---
 
@@ -340,6 +357,22 @@ Content-Type: application/json
 }
 ```
 
+`description` is expected to follow a 3-part structure, built from the message's `bodyText` and `links` (see [Email Body & Links](#email-body--links)):
+
+1. **Context** — 2–4 sentences with concrete identifiers pulled from the body (case/order numbers, required documents, deadlines, what to do), not a paraphrase of the subject line.
+2. **Links** — any relevant entries from `links`, one per line as `- label: url`.
+3. **Source** — the `From: <from> | Account: <account> | <date>` line.
+
+```
+Your support case (#12345678) requires three documents: a copy of your ID, a
+signed affidavit, and proof of purchase. Upload within 7 days of this email
+and reply once done.
+
+- Upload documents: https://example.com/case/12345678
+
+From: no-reply@example.com | Account: Account 2 | 2026-01-01
+```
+
 OpenClaw must always commit before ending its run — task creation, acking, and the Telegram summary all happen as a side effect of this one call. If it never commits, the fetched emails stay unacked and simply reappear next run.
 
 ---
@@ -353,3 +386,4 @@ OpenClaw must always commit before ending its run — task creation, acking, and
 - The notify webhook (`/webhook/email-tasks-notify`) is independent of the fetch/commit pair and has no `Respond to Webhook` node — it's fire-and-forget. Use it for out-of-band alerts rather than as part of the core task pipeline.
 - The Fetch webhook always responds, even when there's no new mail. Previously, a zero-new-mail day left the response chain unfired and the webhook call would hang; `Combine Response` → `Shape Response` now always produces a `{count, messages, openTasks}` payload regardless of how many (if any) new messages survived filtering.
 - Content-based filtering means two emails with the same sender and subject are treated as the same message, even across different mailboxes or with different provider IDs. If you legitimately expect repeat emails with identical subjects from the same sender (e.g., recurring automated reports), only the first will produce a task per acked cycle.
+- Email content — `bodyText`, `snippet`, `links`, `from`, `subject` — is untrusted data. OpenClaw may copy a URL from `links` into a task description; it does not visit links or act on instructions found inside an email.
