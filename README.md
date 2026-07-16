@@ -25,30 +25,30 @@ OpenClaw (AI Agent)
       +-- [Get Account 6 Mail]  (Gmail)
       +-- [Get Account 7 Mail]  (Gmail)
       +-- [Get Account 8 Mail]  (Gmail)
+      +-- [Get Open Tasks]  (Todoist — all open tasks, runs once)
       |
-      | (all 8 run in parallel)
+      | (all 9 branches run in parallel)
       v
-  [Tag with account + source]
-      v
-  [Merge all 8 streams]
-      v
-  [Normalize, Deduplicate, Sort]
+  [Tag with account + source]  →  [Merge all 8 mail streams]  →  [Normalize, Deduplicate, Sort]
       v
   [Filter New]  (READ Seen Message IDs — drop already-acked message IDs)
       v
   [Filter Dup Content]  (READ Seen Message IDs — drop already-acked content keys)
       v
-  [Aggregate New]
-      v
-  [Respond to Webhook]
-      |
-      v
-OpenClaw (AI Agent)
-  — reads email list
+  [Aggregate New] --------------------+
+                                      |
+       [Pipeline Tasks Only] --------+--> [Combine Response] → [Shape Response] → [Respond to Webhook]
+                                                                                          |
+                                                                                          v
+                                                                             OpenClaw (AI Agent)
+  — reads the new-email list + openTasks (currently-open tasks this pipeline created)
   — decides which emails need a task, plus title/description/priority/due date/project for each
-  — decides which emails to skip (no task needed)
+  — skips any email whose action is already covered by an open task, even if worded differently
+  — decides which remaining emails to skip (no task needed)
   — POSTs all of it in one call to Step 2 (Commit)
 ```
+
+Shape Response always returns a well-formed `{count, generatedAt, messages, openTasks}` payload — including on a zero-new-mail day, when `messages` is simply empty.
 
 ### Step 2 — Commit
 
@@ -135,7 +135,11 @@ Caller
 | Filter New | n8n Data Table | Read: filters out messages whose `message_id` was already acked |
 | Filter Dup Content | n8n Data Table | Read: filters out messages whose `content_key` was already acked (catches re-sends/forwards with a new message ID but identical content) |
 | Aggregate New | Aggregate | Collects the surviving messages into a single `messages` array |
-| Respond to Webhook | Respond to Webhook | Returns the filtered email list to OpenClaw |
+| Get Open Tasks | Todoist | Fetches all Todoist tasks; runs once per webhook call, in parallel with the mail fetches |
+| Pipeline Tasks Only | Code (JS) | Filters to tasks this pipeline created that are still open, identified by the `From: ... \| Account: ...` line the Commit step writes into each task's description |
+| Combine Response | Merge | Pairs the new-message list with the open-tasks list by position |
+| Shape Response | Code (JS) | Builds the final `{count, generatedAt, messages, openTasks}` payload — always well-formed, even with zero new messages |
+| Respond to Webhook | Respond to Webhook | Returns the combined payload to OpenClaw |
 
 **Commit workflow (`/webhook/email-tasks-commit`)**
 
@@ -179,9 +183,9 @@ Every message carries two identifiers, both computed in the Normalize, Sort node
 - **`messageId`** — the provider-native ID (`gmail:<id>` or `outlook:<id>`)
 - **`contentKey`** — `<sender email> | <normalized subject>`, with `Re:`/`Fwd:`/`Fw:` prefixes and case/whitespace differences stripped
 
-`contentKey` is what makes cross-mailbox and cross-run dedup possible even when the same message shows up under a different `messageId` — e.g., a forward, a re-send, or the same email delivered separately to two mailboxes.
+`contentKey` is what makes cross-mailbox and cross-run dedup possible even when the same message shows up under a different `messageId` — e.g., a forward, a re-send, or the same email delivered separately to two mailboxes. But it's an exact match on the normalized subject line, so it only catches identical subjects. A reminder email days later about the same underlying request usually has different wording (e.g. "Update Acme Vendor Subscription" today, "Please renew your Acme Vendor plan" next week) — `contentKey` can't see that it's the same request. Catching that needs semantic judgment, not string matching, which is what the third layer below is for.
 
-Two layers of deduplication work together to ensure no email generates more than one Todoist task:
+Three layers of deduplication work together to ensure no email generates more than one Todoist task:
 
 ### 1. In-run deduplication (Normalize, Sort node)
 
@@ -197,6 +201,14 @@ The fetch window is 2 days, so the same email appears on multiple consecutive ru
 
 If a run fails partway (Todoist is unavailable, a single task creation errors, etc.), only the items that actually succeeded get acked. The rest remain unacked, reappear in the next 2-day fetch window, and get retried automatically. Nothing is lost and nothing is double-counted.
 
+### 3. Semantic deduplication (OpenClaw + `openTasks`)
+
+`messageId` and `contentKey` only catch exact re-sends and identical-subject repeats — neither can tell that a differently-worded reminder is about the same underlying request. To close that gap, the Fetch response also includes `openTasks`: every currently-open Todoist task this pipeline has created (via **Get Open Tasks** → **Pipeline Tasks Only**, matched by the `From: ... | Account: ...` line the Commit step writes into each task's description).
+
+OpenClaw's decide step is required to check each candidate email against `openTasks` before turning it into a task — if an open task already covers the same action, even worded differently, the email is skipped instead of creating a duplicate task. This is judgment-based rather than identifier-based, so it catches cases the first two layers miss.
+
+Once a task is completed in Todoist, it drops out of `openTasks`, so a later reminder about that same thing is free to create a fresh task — that's the intended behavior, since at that point it's a genuinely new open item.
+
 #### Data Table Schema
 
 | Column | Type | Description |
@@ -210,12 +222,11 @@ If a run fails partway (Todoist is unavailable, a single task creation errors, e
 
 ## Output Schema
 
-The webhook returns a single JSON object containing only emails not previously seen:
+The webhook returns a single, always-well-formed JSON object — including on a zero-new-mail day, when `messages` is simply an empty array (it used to hang instead of responding in that case):
 
 ```json
 {
   "count": 42,
-  "duplicatesRemoved": 3,
   "generatedAt": "2026-01-01T14:00:00.000Z",
   "messages": [
     {
@@ -228,11 +239,18 @@ The webhook returns a single JSON object containing only emails not previously s
       "snippet": "Preview of the email body...",
       "date": "2026-01-01T13:45:00.000Z"
     }
+  ],
+  "openTasks": [
+    {
+      "title": "Renew Acme Vendor subscription",
+      "project": "Project 5",
+      "createdAt": "2026-01-01"
+    }
   ]
 }
 ```
 
-`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions. `contentKey` is the normalized `sender|subject` pair used for content-based deduplication (see [Deduplication](#deduplication)).
+`messageId` is prefixed with `gmail:` or `outlook:` to prevent cross-provider ID collisions. `contentKey` is the normalized `sender|subject` pair used for content-based deduplication. `openTasks` lists every currently-open Todoist task this pipeline has created, and is what OpenClaw uses for semantic duplicate detection (see [Deduplication](#deduplication)).
 
 ---
 
@@ -333,4 +351,5 @@ OpenClaw must always commit before ending its run — task creation, acking, and
 - The data table grows over time. Old entries can be pruned periodically without affecting correctness, as long as you only remove rows with a `processed_at` older than your lookback window.
 - Project name matching in **Prepare Tasks** is case-insensitive, strips emoji/smart-quotes, and falls back to a substring match before defaulting to Inbox — so OpenClaw doesn't need to send an exact project name.
 - The notify webhook (`/webhook/email-tasks-notify`) is independent of the fetch/commit pair and has no `Respond to Webhook` node — it's fire-and-forget. Use it for out-of-band alerts rather than as part of the core task pipeline.
+- The Fetch webhook always responds, even when there's no new mail. Previously, a zero-new-mail day left the response chain unfired and the webhook call would hang; `Combine Response` → `Shape Response` now always produces a `{count, messages, openTasks}` payload regardless of how many (if any) new messages survived filtering.
 - Content-based filtering means two emails with the same sender and subject are treated as the same message, even across different mailboxes or with different provider IDs. If you legitimately expect repeat emails with identical subjects from the same sender (e.g., recurring automated reports), only the first will produce a task per acked cycle.
