@@ -21,9 +21,11 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": true,
+        "simple": false,
         "filters": {
           "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
-        }
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -45,9 +47,11 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": true,
+        "simple": false,
         "filters": {
           "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
-        }
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -69,9 +73,11 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": true,
+        "simple": false,
         "filters": {
           "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
-        }
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -93,9 +99,11 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": true,
+        "simple": false,
         "filters": {
           "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
-        }
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -117,9 +125,11 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": true,
+        "simple": false,
         "filters": {
           "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
-        }
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -141,9 +151,11 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": true,
+        "simple": false,
         "filters": {
           "receivedAfter": "={{ $now.minus(2, 'day').toISO() }}"
-        }
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -369,7 +381,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const isGmail = j.internalDate !== undefined || j.labels !== undefined || j.threadId !== undefined;\n  const id = (j.id !== undefined && j.id !== null) ? String(j.id) : '';\n  if (isGmail) {\n    out.push({\n      messageId: id ? `gmail:${id}` : '',\n      account: j.account || j.To || '',\n      source: 'Gmail',\n      from: j.From || '',\n      subject: j.Subject || '',\n      snippet: j.snippet || '',\n      date: j.internalDate ? new Date(Number(j.internalDate)).toISOString() : ''\n    });\n  } else {\n    out.push({\n      messageId: id ? `outlook:${id}` : '',\n      account: j.account || (Array.isArray(j.to) ? j.to[0]?.address : '') || '',\n      source: 'Outlook',\n      from: (typeof j.from === 'string' ? j.from : j.from?.emailAddress?.address) || '',\n      subject: j.subject || '',\n      snippet: j.bodyPreview || '',\n      date: j.receivedDateTime || j.sentDateTime || ''\n    });\n  }\n}\n\n// content key: sender email + normalized subject. Ignores which mailbox/provider\n// received it, so the same message landing in multiple accounts collapses to one.\nconst emailOf = s => {\n  const m = (s || '').toString().toLowerCase().match(/<([^>]+)>/);\n  return (m ? m[1] : (s || '')).toString().trim().toLowerCase();\n};\nconst normSubj = s => (s || '').toString().trim().toLowerCase()\n  .replace(/^(re|fwd|fw)\\s*:\\s*/i, '')\n  .replace(/^(re|fwd|fw)\\s*:\\s*/i, '')\n  .replace(/\\s+/g, ' ');\nfor (const m of out) {\n  m.contentKey = emailOf(m.from) + '|' + normSubj(m.subject);\n}\n\n// newest first, so the copy we keep is the freshest\nout.sort((a, b) => new Date(b.date) - new Date(a.date));\n\n// de-dupe within this run by content (collapses same message across mailboxes)\nconst seen = new Set();\nconst deduped = [];\nfor (const m of out) {\n  const key = m.contentKey || m.messageId;\n  if (seen.has(key)) continue;\n  seen.add(key);\n  deduped.push(m);\n}\n\nreturn [{ json: {\n  count: deduped.length,\n  duplicatesRemoved: out.length - deduped.length,\n  generatedAt: new Date().toISOString(),\n  messages: deduped\n} }];"
+        "jsCode": "const ZW = /[​‌‍‎‏﻿­͏⠀]/g;\n\nconst decodeEntities = s => (s || '')\n  .replace(/&zwnj;|&zwj;|&shy;/gi, '')\n  .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')\n  .replace(/&quot;/gi, '\"').replace(/&#0*39;/g, \"'\").replace(/&#(\\d+);/g, (m, n) => { try { return String.fromCodePoint(+n); } catch (e) { return ' '; } });\n\nconst cleanText = s => decodeEntities((s || '').toString()).replace(ZW, '').replace(/\\s+/g, ' ').trim();\n\nconst stripHtml = html => cleanText((html || '')\n  .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n  .replace(/<head[\\s\\S]*?<\\/head>/gi, ' ')\n  .replace(/<[^>]+>/g, ' '));\n\nconst BAD_LINK = /unsubscribe|list-manage|email.?preferences|opt[-_]?out|privacy|view.?in.?browser|manage.?subscri|update.?preferences|mailto:/i;\n\nconst extractLinks = (html) => {\n  const links = [];\n  const seen = new Set();\n  if (!html) return links;\n  const re = /<a\\b[^>]*href=[\"']?(https?:\\/\\/[^\"'\\s>]+)[\"']?[^>]*>([\\s\\S]*?)<\\/a>/gi;\n  let m;\n  while ((m = re.exec(html)) !== null && links.length < 5) {\n    const url = m[1].slice(0, 400);\n    const label = stripHtml(m[2]).slice(0, 60);\n    if (!label) continue;\n    if (BAD_LINK.test(url) || BAD_LINK.test(label)) continue;\n    const key = url.split('?')[0];\n    if (seen.has(key)) continue;\n    seen.add(key);\n    links.push({ label, url });\n  }\n  return links;\n};\n\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const isGmail = j.threadId !== undefined || j.labelIds !== undefined || j.labels !== undefined || j.internalDate !== undefined;\n  const id = (j.id !== undefined && j.id !== null) ? String(j.id) : '';\n  if (isGmail) {\n    const html = j.html || '';\n    const text = cleanText(j.text) || stripHtml(html) || cleanText(j.snippet);\n    out.push({\n      messageId: id ? `gmail:${id}` : '',\n      account: j.account || '',\n      source: 'Gmail',\n      from: (j.from && (j.from.text || (j.from.value && j.from.value[0] && j.from.value[0].address))) || j.From || '',\n      subject: j.subject || j.Subject || '',\n      snippet: cleanText(j.snippet) || text.slice(0, 200),\n      bodyText: text.slice(0, 1500),\n      links: extractLinks(html),\n      date: j.date ? new Date(j.date).toISOString() : (j.internalDate ? new Date(Number(j.internalDate)).toISOString() : '')\n    });\n  } else {\n    const isHtmlBody = j.body && /html/i.test(j.body.contentType || '');\n    const html = isHtmlBody ? (j.body.content || '') : '';\n    const text = (!isHtmlBody && j.body && j.body.content) ? cleanText(j.body.content) : (stripHtml(html) || cleanText(j.bodyPreview));\n    out.push({\n      messageId: id ? `outlook:${id}` : '',\n      account: j.account || (Array.isArray(j.to) ? j.to[0]?.address : '') || '',\n      source: 'Outlook',\n      from: (typeof j.from === 'string' ? j.from : j.from?.emailAddress?.address) || '',\n      subject: j.subject || '',\n      snippet: cleanText(j.bodyPreview) || text.slice(0, 200),\n      bodyText: text.slice(0, 1500),\n      links: extractLinks(html),\n      date: j.receivedDateTime || j.sentDateTime || ''\n    });\n  }\n}\n\n// content key: sender email + normalized subject. Ignores which mailbox/provider\n// received it, so the same message landing in multiple accounts collapses to one.\nconst emailOf = s => {\n  const m = (s || '').toString().toLowerCase().match(/<([^>]+)>/);\n  return (m ? m[1] : (s || '')).toString().trim().toLowerCase();\n};\nconst normSubj = s => (s || '').toString().trim().toLowerCase()\n  .replace(/^(re|fwd|fw)\\s*:\\s*/i, '')\n  .replace(/^(re|fwd|fw)\\s*:\\s*/i, '')\n  .replace(/\\s+/g, ' ');\nfor (const m of out) {\n  m.contentKey = emailOf(m.from) + '|' + normSubj(m.subject);\n}\n\n// newest first, so the copy we keep is the freshest\nout.sort((a, b) => new Date(b.date) - new Date(a.date));\n\n// de-dupe within this run by content (collapses same message across mailboxes)\nconst seen = new Set();\nconst deduped = [];\nfor (const m of out) {\n  const key = m.contentKey || m.messageId;\n  if (seen.has(key)) continue;\n  seen.add(key);\n  deduped.push(m);\n}\n\nreturn [{ json: {\n  count: deduped.length,\n  duplicatesRemoved: out.length - deduped.length,\n  generatedAt: new Date().toISOString(),\n  messages: deduped\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -736,7 +748,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\nconst tasks = Array.isArray(body.tasks) ? body.tasks : [];\n\nconst PROJECTS = {\n  'inbox': '6gc2qFxj6vPvH52F',\n  'project 1': '6gchGJVQMH4f8rJc',\n  'project 2': '6gchGJRm92r52mPM',\n  'project 3': '6gchGJVJRfRww5H7',\n  'personal': '6gf7GpRPFr369wQG',\n  'project 4': '6gf7RXX4wrjQ7QhV',\n  'project 5': '6gchGJWrHRGPGvQr',\n  'project 6': '6gchGJc3MhCRHxG6',\n  'project 7': '6gchGJf56F4wpgwv',\n  'project 8': '6gchGJggMVjXCMCP',\n  'project 9': '6gchGJhP5wFj8Qf7',\n  'project 10': '6gchGJmh7x2jMXqF',\n  'project 11': '6gchGJmcWJJXRGq3',\n  'project 12': '6gchGJpVXvhC6PQj',\n  'project 13': '6gchGJrFMcw3p62X',\n  'project 14': '6gchGJqG53crVcq9',\n  'project 15': '6gchGJxpQfFggGf4',\n  'project 16': '6gchGJxGwpvjJg4j',\n  'project 17': '6gchGJwXW59gCrvH',\n  'project 18': '6gchGM3GvVwfv5vg',\n  'project 19': '6gchGM2jrMF64gcv',\n  'new project ideas': '6gchMG43F63QWxqp',\n  'project 20': '6ggpg3pWrVxX4gqX',\n};\n\nconst norm = s => (s || '').toString()\n  .replace(/[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{FE0F}]/gu, '')\n  .replace(/[´’‘']/g, '')\n  .toLowerCase().replace(/\\s+/g, ' ').trim();\n\nconst resolveProject = (name) => {\n  const n = norm(name);\n  if (n && PROJECTS[n]) return { id: PROJECTS[n], name: name };\n  if (n) {\n    for (const [k, id] of Object.entries(PROJECTS)) {\n      if (k.includes(n) || n.includes(k)) return { id, name: name };\n    }\n  }\n  return { id: PROJECTS['inbox'], name: 'Inbox' };\n};\n\nconst PRIO = { p1: 4, p2: 3, p3: 2, p4: 1 };\n\nconst out = [];\nfor (const t of tasks) {\n  const proj = resolveProject(t.project);\n  out.push({ json: {\n    title: (t.title || 'Untitled task').toString().slice(0, 500),\n    description: (t.description || '').toString().slice(0, 16000),\n    prio: PRIO[(t.priority || 'p4').toString().toLowerCase()] || 1,\n    dueString: t.dueString ? t.dueString.toString() : '',\n    projectName: proj.name,\n    projectId: proj.id,\n    messageId: t.messageId || '',\n    subject: t.subject || '',\n    contentKey: t.contentKey || '',\n  }});\n}\nreturn out;"
+        "jsCode": "const body = $input.first().json.body || {};\nconst tasks = Array.isArray(body.tasks) ? body.tasks : [];\n\nconst PROJECTS = {\n  'inbox': '6gc2qFxj6vPvH52F',\n  'accounts payable': '6h67V5cGVfPMjjVc',\n  'awl phase enterprises': '6gchGJVQMH4f8rJc',\n  'adjusted intelligence': '6gchGJRm92r52mPM',\n  'buy my house now fast': '6gchGJVJRfRww5H7',\n  'chris personal': '6gf7GpRPFr369wQG',\n  'elev8d global llc - general business activities': '6gf7RXX4wrjQ7QhV',\n  'elev8d cannabis - general': '6gchGJWrHRGPGvQr',\n  'elev8d e-commerce': '6gchGJc3MhCRHxG6',\n  'elev8d stores': '6gchGJf56F4wpgwv',\n  'elev8d & candy brands': '6gchGJggMVjXCMCP',\n  'm1 capital fund': '6gchGJhP5wFj8Qf7',\n  'elev8d real estate development': '6gchGJmh7x2jMXqF',\n  'cancun capital fund': '6gchGJmcWJJXRGq3',\n  'elev8d theme park': '6gchGJpVXvhC6PQj',\n  'elev8d ai': '6gchGJrFMcw3p62X',\n  'trading room': '6gchGJqG53crVcq9',\n  'elev8d products': '6gchGJxpQfFggGf4',\n  'elev8d tek labs': '6gchGJxGwpvjJg4j',\n  'marketing & growth': '6gchGJwXW59gCrvH',\n  'finance & corporate': '6gchGM3GvVwfv5vg',\n  'elev8d content calendar': '6gchGM2jrMF64gcv',\n  'chris new projects ideas': '6gchMG43F63QWxqp',\n  '750 harrison': '6ggpg3pWrVxX4gqX',\n};\n\nconst norm = s => (s || '').toString()\n  .replace(/[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{FE0F}]/gu, '')\n  .replace(/[´’‘']/g, '')\n  .toLowerCase().replace(/\\s+/g, ' ').trim();\n\nconst resolveProject = (name) => {\n  const n = norm(name);\n  if (n && PROJECTS[n]) return { id: PROJECTS[n], name: name };\n  if (n) {\n    for (const [k, id] of Object.entries(PROJECTS)) {\n      if (k.includes(n) || n.includes(k)) return { id, name: name };\n    }\n  }\n  return { id: PROJECTS['inbox'], name: 'Inbox' };\n};\n\nconst PRIO = { p1: 4, p2: 3, p3: 2, p4: 1 };\n\nconst out = [];\nfor (const t of tasks) {\n  const proj = resolveProject(t.project);\n  out.push({ json: {\n    title: (t.title || 'Untitled task').toString().slice(0, 500),\n    description: (t.description || '').toString().slice(0, 16000),\n    prio: PRIO[(t.priority || 'p4').toString().toLowerCase()] || 1,\n    dueString: t.dueString ? t.dueString.toString() : '',\n    projectName: proj.name,\n    projectId: proj.id,\n    messageId: t.messageId || '',\n    subject: t.subject || '',\n    contentKey: t.contentKey || '',\n  }});\n}\nreturn out;"
       },
       "id": "6afd0e34-b6c1-481f-a98b-5d483ad8c83b",
       "name": "Prepare Tasks",
@@ -1569,7 +1581,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "timeSavedPerExecution": 230
   },
-  "versionId": "2d18d309-a873-4351-9f4e-6261efd4a9ee",
+  "versionId": "93d0f9b5-fd77-4a12-940a-654053b113d1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "aiBuilderAssisted": true,
